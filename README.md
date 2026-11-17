@@ -1,5 +1,15 @@
 ﻿# NeuralNetwork
 
+## Data de criação
+
+Datas inferidas dos metadados dos arquivos em `C:\R\NeuralNetwork` (Windows).
+
+| Referência | Data |
+|------------|------|
+| Pasta criada no disco | 23 de dezembro de 2022 |
+| Primeiro código ou notebook versionado | 23 de dezembro de 2022 (`NeuralNetwork2.Rmd`) |
+| Repositório Git (commit inicial) | 16 de novembro de 2026 |
+
 Projeto local em `C:\R\NeuralNetwork`.
 
 ## Como usar
