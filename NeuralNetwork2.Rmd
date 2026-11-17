@@ -1,0 +1,170 @@
+---
+title: "NeuralNetwork"
+output: html_document
+date: "2022-12-23"
+---
+
+```{r}
+init_params <- function(input, hidden, output){
+  weights_list = list()
+  bias_list = list()
+  layers = c(input, hidden, output)
+  
+  for(n in 1:(length(layers) - 1)){
+    weights_list[[n]] = matrix(rnorm(layers[[n]]*layers[[n+1]], 0, 0.01), nrow = layers[[n+1]])
+    bias_list[[n]] = matrix(rnorm(layers[[n+1]], 0, 0.01), nrow = layers[[n+1]])
+  }
+  
+  return(list(weights_list, bias_list))
+}
+```
+
+```{r}
+relu <- function(x){
+  if(x > 0){return(x)}
+  else{return(0)}
+}
+relu <- Vectorize(relu)
+
+relu_matrix <- function(M){
+  return(apply(M, 2, relu))
+}
+
+relu_deriv <- function(x){
+  return((x > 0)*1)
+}
+
+softmax <- function(x){
+  return(exp(x)/sum(exp(x)))
+}
+
+softmax_matrix <- function(M){
+  return(apply(M, 2, softmax))
+}
+
+sum_vector <- function(M, Y){
+  sum_norm <- function(x, y = Y){return(x+y)}
+  return(apply(M, 2, sum_norm))
+}
+
+one_hot <- function(Y){
+  one_hot_Y <- model.matrix(~ 0 + factor(Y))
+  return(one_hot_Y)
+}
+
+get_predictions <- function(A2) {
+  return(apply(A2, 2, which.max))
+}
+
+get_accuracy <- function(predictions, Y) {
+  return(mean(predictions == Y))
+}
+```
+
+```{r}
+forward_prop <- function(weights_list, bias_list, X){
+  Z_list = list()
+  A_list = list()
+  
+  Z_list[[1]] = (weights_list[[1]] %*% X) |> sum_vector(bias_list[[1]])
+  A_list[[1]] = relu_matrix(Z_list[[1]])
+  
+  it = length(weights_list)
+  
+  if(it > 2){
+    for(n in 2:(it - 1)){
+      Z_list[[n]] = (weights_list[[n]] %*% A_list[[n-1]]) |> sum_vector(bias_list[[n]])
+      A_list[[n]] = relu_matrix(Z_list[[n]])
+    }
+  }
+  
+  Z_list[[it]] = (weights_list[[it]] %*% A_list[[it - 1]]) |> sum_vector(bias_list[[it]])
+  A_list[[it]] = softmax_matrix(Z_list[[it]])
+  
+  return(list(Z_list, A_list))
+}
+```
+
+```{r}
+backward_prop <- function(A_list, weights_list, X, Y){
+  d_weights_list = list()
+  d_bias_list = list()
+  error_list = list()
+  
+  n = length(weights_list) 
+  
+  error_list[[n]] = get_predictions(A_list[[n]]) - (one_hot(Y) |> as.matrix() |> t()) 
+  
+  d_weights_list[[n]] = t(error_list[[n]]) %*% weights_list[[n]]
+  d_bias_list[[n]] = colSums(error_list[[n]])
+  
+  print(dim(error_list[[n]]))
+  print(dim(weights_list[[n]]))
+  
+  for(k in (n - 1):1){
+    error_list[[k]] = (error_list[[k+1]] %*% t(weights_list[[k+1]])) * relu_deriv(bias_list[[k]])
+      
+    d_weights_list[[k]] = t(error_list[[k]]) %*% weights_list[[k]]
+    d_bias_list[[k]] = colSums(error_list[[k]])
+  }
+  
+  return(list(d_weights_list, d_bias_list))
+}
+```
+
+```{r}
+update_params <- function(weights_list, bias_list, d_weights_list, d_bias_list, alpha){
+  m = length(weights_list)
+  
+  for(k in 1:m){
+    weights_list[[k]] = weights_list[[k]] - (alpha * d_weights_list[[k]])
+    bias_list[[k]] = bias_list[[k]] - (alpha * d_bias_list[[k]])
+  }
+  
+  return(list(weights_list, bias_list))
+}
+```
+
+```{r}
+gradient_descent <- function(X, Y, hidden, alpha, iterations){
+  input_size = nrow(X)
+  output_size = length(unique(Y))
+  weibias_list = init_params(input = input_size, hidden = hidden, output = output_size)
+  weights_list = weibias_list[[1]]
+  bias_list = weibias_list[[2]]
+  
+  for(i in 1:iterations){
+    ZA_list = forward_prop(weights_list = weights_list, bias_list = bias_list, X = X)
+    Z_list = ZA_list[[1]]
+    A_list = ZA_list[[2]]
+    d_weibias_list = backward_prop(A_list, weights_list, X, Y)
+    d_weights_list = d_weibias_list[[1]]
+    d_bias_list = d_weibias_list[[2]]
+    weibias_list = update_params(weights_list, bias_list, d_weights_list, d_bias_list, alpha)
+    weights_list = weibias_list[[1]]
+    bias_list = weibias_list[[2]]
+    
+    if(i %% 10 == 0){
+      print(paste("Iteration:", i))
+      predictions = get_predictions(alist[[length(alist)]])
+      print(get_accuracy(predictions, Y))
+    }
+  }
+}
+```
+
+
+```{r}
+mnist_train = read.csv("mnist_train.csv")
+```
+
+```{r}
+shuffle <- sample(1:nrow(mnist_train), nrow(mnist_train))
+X_train = mnist_train[shuffle,-1] |> as.matrix() |> t() 
+X_train = X_train/255
+Y_train = mnist_train[shuffle,1]  
+```
+
+```{r}
+wblist = gradient_descent(X = X_train[,1:1000], Y = Y_train[1:1000], hidden = 10, alpha = 0.1, iterations = 100)
+```

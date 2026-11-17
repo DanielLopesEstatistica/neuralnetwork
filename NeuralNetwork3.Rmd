@@ -1,0 +1,30 @@
+---
+title: "NeuralNetwork3"
+author: "Daniel"
+date: "2025-10-02"
+output: html_document
+---
+
+```{r}
+init_params <- function(input_layer_size, output_layer_size, hidden_layers_sizes){
+  layers_sizes = c(input_layer_size, hidden_layers_sizes, output_layer_size)
+  
+  wlist <- list()
+  blist <- list()
+  aux = 0
+  
+  for(n in 1:(length(layers_sizes)-1)){
+    wlist[[n]] = matrix(runif(layers_sizes[n+1]*layers_sizes[n], min = -0.5, max = 0.5),
+                               nrow = layers_sizes[n+1], ncol = layers_sizes[n])
+    blist[[n]] = matrix(runif(layers_sizes[n+1], min = -0.5, max = 0.5),
+                               nrow = layers_sizes[n+1], ncol = 1)
+  }
+  
+  wblist <- list(wlist, blist)
+  
+  return(wblist)
+}
+
+init_params(10, 10, c(10,10))
+```
+

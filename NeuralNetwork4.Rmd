@@ -1,0 +1,319 @@
+---
+title: "NeuralNetwork"
+author: "Daniel Lopes"
+date: "2022-12-21"
+output: html_document
+---
+
+```{r}
+sum_vector <- function(A, v){
+  if(nrow(A) != length(v)){
+    stop("hammer time")
+  }
+  for(n in 1:ncol(A)){
+    A[,n] = A[,n] + v
+  }
+  
+  return(A)
+}
+```
+
+
+```{r}
+get_dim <- function(x){
+  a = nrow(x)
+  b = ncol(x)
+  result = paste(a, " x ", b)
+  print(result)
+}
+```
+
+
+```{r}
+init_params <- function(input_layer_size, output_layer_size, hidden_layers_sizes){
+  layers_sizes = c(input_layer_size, hidden_layers_sizes, output_layer_size)
+  
+  wlist <- list()
+  blist <- list()
+  aux = 0
+  
+  for(n in 1:(length(layers_sizes)-1)){
+    wlist[[n]] = matrix(runif(layers_sizes[n+1]*layers_sizes[n], min = -0.5, max = 0.5),
+                               nrow = layers_sizes[n+1], ncol = layers_sizes[n])
+    blist[[n]] = matrix(runif(layers_sizes[n+1], min = -0.5, max = 0.5),
+                               nrow = layers_sizes[n+1], ncol = 1)
+  }
+  
+  wblist <- list(wlist, blist)
+  
+  return(wblist)
+}
+```
+
+```{r}
+logsumexp <- function (x) {
+  y = max(x)
+  y + log(sum(exp(x - y)))
+}
+
+softmax <- function (x) {
+  exp(x - logsumexp(x))
+}
+
+ReLU <- function(Z) {
+  return(pmax(Z, 0))
+}
+
+ReLU_deriv <- function(Z) {
+  return(Z > 0)
+}
+```
+
+```{r}
+relu <- function(x){
+  if(x > 0){return(x)}
+  else{return(0)}
+}
+relu <- Vectorize(relu)
+
+relu_matrix <- function(M){
+  return(apply(M, 2, relu))
+}
+
+relu_deriv <- function(x){
+  return((x > 0)*1)
+}
+
+softmax <- function(x){
+  return(exp(x)/sum(exp(x)))
+}
+
+softmax_matrix <- function(M){
+  return(apply(M, 2, softmax))
+}
+
+sum_vector <- function(M, Y){
+  sum_norm <- function(x, y = Y){return(x+y)}
+  return(apply(M, 2, sum_norm))
+}
+
+one_hot <- function(Y){
+  one_hot_Y <- model.matrix(~ 0 + factor(Y))
+  return(one_hot_Y)
+}
+```
+
+```{r}
+forward_prop <- function(wlist, blist, X){
+    zlist <- list()
+    alist <- list()
+    n = length(wlist)
+    
+    
+    
+    Z <- (wlist[[1]] %*% X) |> sum_vector(blist[[1]])
+    A <- relu_matrix(Z) 
+    
+    nA = nrow(A)
+    ajuste = rep(-1/2, nA)
+    A = A |> sum_vector(ajuste)
+    
+    
+    zlist[[1]] = Z
+    alist[[1]] = A
+    
+    
+    if(length(wlist) - 1 >= 2)
+    {
+    for(i in 2:(length(wlist)-1)){
+      Z = (wlist[[i]] %*% A) |> sum_vector(blist[[i]])
+      A = relu_matrix(Z) 
+      
+      nA = nrow(A)
+      ajuste = rep(-1/2, nA)
+      A = A |> sum_vector(ajuste)
+      
+      zlist[[i]] = Z
+      alist[[i]] = A
+    }
+    }
+    
+    
+    
+    Z = (wlist[[n]] %*% A) |> sum_vector(blist[[n]])
+    A = softmax_matrix(Z) 
+    
+    nA = nrow(A)
+    ajuste = rep(-1/2, nA)
+    A = A |> sum_vector(ajuste)
+    
+    zlist[[n]] = Z
+    alist[[n]] = A
+    
+    zalist = list(zlist, alist)
+    
+    return(zalist)
+}
+```
+
+```{r}
+one_hot <- function(Y) {
+  one_hot_Y <- model.matrix(~ 0 + factor(Y))
+  return(one_hot_Y)
+}
+```
+
+```{r}
+backward_prop <- function(zlist, alist, wlist, X, Y){
+  deriv_wlist = list()
+  deriv_zlist = list()
+  deriv_blist = list()
+  m = ncol(X)
+  
+  zlist = rev(zlist)
+  alist = rev(alist)
+  wlist = rev(wlist)
+  
+  one_hot_Y = one_hot(Y) |> as.matrix() |> t()
+  
+  deriv_zlist[[1]] = alist[[1]] - one_hot_Y 
+
+  deriv_wlist[[1]] = (1/m) * (deriv_zlist[[1]] %*% t(alist[[2]]))
+  deriv_blist[[1]] = (1/m) * rowSums(deriv_zlist[[1]])
+  
+  if(length(zlist) - 1 >= 2)
+  {
+  for(n in 2:(length(zlist)-1)){
+    deriv_zlist[[n]] = (t(deriv_wlist[[n-1]]) %*% deriv_zlist[[n-1]]) * ReLU_deriv(zlist[[n]])
+    deriv_wlist[[n]] = (1/m) * deriv_zlist[[n]]  %*% t(alist[[n+1]])
+    deriv_blist[[n]] = (1/m) * rowSums(deriv_zlist[[n]])
+  }
+  }
+  
+  n = length(zlist)
+  
+  deriv_zlist[[n]] = (t(deriv_wlist[[n-1]]) %*% deriv_zlist[[n-1]]) * ReLU_deriv(zlist[[n]])
+  deriv_wlist[[n]] = (1/m) * (deriv_zlist[[n]]  %*% t(X))
+  deriv_blist[[n]] = (1/m) * (rowSums(deriv_zlist[[n]]))
+  
+  
+  deriv_wlist = rev(deriv_wlist)
+  deriv_blist = rev(deriv_blist)
+  
+  return(list(deriv_wlist, deriv_blist))
+}
+```
+
+```{r}
+update_params <- function(wlist, blist, deriv_wlist, deriv_blist, alpha){
+  teste <<- deriv_wlist
+  m = length(wlist)
+  for(n in 1:m){
+    wlist[[n]] = wlist[[n]] - (alpha * deriv_wlist[[n]])
+    blist[[n]] = blist[[n]] - (alpha * deriv_blist[[n]])
+  }
+  return(list(wlist, blist))
+}
+```
+
+```{r}
+get_predictions <- function(A2) {
+  return(apply(A2, 2, which.max) - 1)
+}
+
+get_accuracy <- function(predictions, Y) {
+  return(mean(predictions == Y))
+}
+```
+
+```{r}
+gradient_descent <- function(X, Y, hidden, alpha, iterations, modulo = 10){
+  input_size = nrow(X)
+  output_size = length(unique(Y))
+  wblist = init_params(input_size, output_size, hidden)
+  wlist = wblist[[1]]
+  blist = wblist[[2]]
+  
+  for(i in 1:iterations){
+    zalist = forward_prop(wlist, blist, X)
+    zlist = zalist[[1]]
+    alist = zalist[[2]]
+    deriv_wblist = backward_prop(zlist, alist, wlist, X, Y)
+    deriv_wlist = deriv_wblist[[1]]
+    deriv_blist = deriv_wblist[[2]]
+    wblist = update_params(wlist, blist, deriv_wlist, deriv_blist, alpha)
+    wlist = wblist[[1]]
+    blist = wblist[[2]]
+    
+    if(i %% modulo == 0){
+      print(paste("Iteration:", i))
+      predictions = get_predictions(alist[[length(alist)]])
+      print(table(predictions))
+      print(get_accuracy(predictions, Y))
+    }
+  }
+  
+  return(list(wlist, blist))
+}
+```
+
+```{r}
+set.seed(236081)
+mnist_train = read.csv("mnist_train.csv")
+```
+
+```{r}
+shuffle <- sample(1:nrow(mnist_train), nrow(mnist_train))
+X_train = mnist_train[shuffle,-1] |> as.matrix() |> t() 
+X_train = X_train/255
+Y_train = mnist_train[shuffle,1]  
+```
+
+```{r}
+set.seed(236081)
+corte = 10000
+modulo = 5
+wblist = gradient_descent(X = X_train[,1:corte], Y = Y_train[1:corte], hidden = c(10,10), alpha = 0.2, iterations = 1000, modulo)
+```
+
+```{r}
+make_predictions <- function(X, wblist){
+  wlist = wblist[[1]]
+  blist = wblist[[2]]
+  alist = forward_prop(wlist, blist, X)[[2]]
+  A = alist[[length(alist)]]
+  predictions = get_predictions(A)
+  return(predictions)
+}
+```
+
+```{r}
+for(n in 1:100){
+  print(make_predictions(X_train[,n], wblist))
+}
+
+```
+
+```{r}
+library(tidyverse)
+
+pessoas <- read.csv("weight-height.csv")
+
+nnpessoas <- pessoas %>% 
+  mutate(Gender = ifelse(Gender == "Male", 1, 0))
+
+linhas3 <- sample(1:nrow(nnpessoas), nrow(nnpessoas)*0.65)
+
+nntreino_pessoas <- nnpessoas[linhas3,] 
+nnteste_pessoas <- nnpessoas[-linhas3,]
+```
+
+```{r}
+modelo_w <- gradient_descent(nntreino_pessoas[1:1000,-1] |> as.matrix() |> t() |> scale(),
+                             nntreino_pessoas[1:1000,1] |> as.matrix(), hidden = c(5,5), alpha = 0.2, iterations = 1000, modulo = 10)
+```
+
+```{r}
+modelo_w
+```
+

@@ -1,0 +1,15 @@
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+Rlibs/
+renv/library/
+.httr-oauth
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+
+mnist_train.csv
+
