@@ -1,21 +1,26 @@
-﻿# NeuralNetwork
+﻿<sub>**Datas:** pasta 23/12/2022 · evolução `NeuralNetwork2.Rmd` → `NeuralNetwork4.Rmd` (out/2022)</sub>
 
-## Data de criação
+# Rede neural implementada à mão
 
-Datas inferidas dos metadados dos arquivos em `C:\R\NeuralNetwork` (Windows).
+**Forward pass, backprop, ReLU e softmax** em R puro, sem `tensorflow`.
 
-| Referência | Data |
-|------------|------|
-| Pasta criada no disco | 23 de dezembro de 2022 |
-| Primeiro código ou notebook versionado | 23 de dezembro de 2022 (`NeuralNetwork2.Rmd`) |
-| Repositório Git (commit inicial) | 16 de novembro de 2026 |
+## O que o código faz
 
-Projeto local em `C:\R\NeuralNetwork`.
+| Arquivo | Conteúdo |
+|---------|----------|
+| `NeuralNetwork2.Rmd` | Versão inicial, peso/altura |
+| `NeuralNetwork3.Rmd` | Refinamentos |
+| `NeuralNetwork4.Rmd` | Versão mais completa + MNIST em CSV |
 
-## Como usar
+Treina em batches, calcula gradientes manualmente, matriz de confusão no fim.
 
-Abra os arquivos `.R`, `.Rmd`, `.py` ou o `.Rproj` nesta pasta no RStudio ou no editor de sua preferência.
+## Dados
 
-## Dados grandes
+| Arquivo | Uso |
+|---------|-----|
+| `weight-height.csv` | Classificação binária (sexo) |
+| `mnist_train.csv` | Coluna 1 = dígito; demais = 784 pixels (pode estar fora do Git por tamanho) |
 
-Arquivos acima de 100 MB podem estar listados no `.gitignore`; obtenha-os localmente se o código referenciar esses caminhos.
+## Como rodar
+
+Comece por `NeuralNetwork4.Rmd` se quiser MNIST; knit no RStudio.
